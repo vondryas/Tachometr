@@ -6,9 +6,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
@@ -25,16 +30,17 @@ class MainActivity : ComponentActivity() {
         val sessionDao = database.sessionDao()
         val locationTracker = AndroidLocationTracker(applicationContext)
 
-        // 2. Továrna pro vytvoření ViewModelu s parametry
-        val viewModelFactory = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return TachometerViewModel(locationDao, sessionDao, locationTracker) as T
-            }
-        }
-
         setContent {
-            MaterialTheme {
+            val darkTheme = isSystemInDarkTheme()
+            val dynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+            val colorScheme = when {
+                dynamicColor && darkTheme -> dynamicDarkColorScheme(applicationContext)
+                dynamicColor && !darkTheme -> dynamicLightColorScheme(applicationContext)
+                darkTheme -> darkColorScheme()
+                else -> lightColorScheme()
+            }
+
+            MaterialTheme(colorScheme = colorScheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -58,9 +64,13 @@ class MainActivity : ComponentActivity() {
                         permissionLauncher.launch(permissionsToRequest.toTypedArray())
                     }
 
-                    // 4. Vykreslení tachometru
-                    val viewModel: TachometerViewModel = viewModel(factory = viewModelFactory)
-                    TachometerScreen(viewModel = viewModel)
+                    // 4. Hlavní navigace aplikace
+                    AppNavigation(
+                        locationDao = locationDao,
+                        sessionDao = sessionDao,
+                        locationTracker = locationTracker,
+                        context = applicationContext
+                    )
                 }
             }
         }

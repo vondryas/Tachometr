@@ -1,5 +1,6 @@
 package com.example.tachometr
 
+import android.R
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -11,34 +12,35 @@ import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.*
-import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 class LocationService : Service() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     private lateinit var locationDao: LocationDao
 
-    private var lastLocation: Location? = null
     private var currentSessionId: Long = 0L
+    private var watchdogJob: Job? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val gpsProcessor = GpsProcessor()
 
     override fun onCreate() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        // Inicializace sdílené KMP databáze pro Android
         val db = getDatabase(DatabaseBuilder(this))
         locationDao = db.locationDao()
 
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 result.lastLocation?.let { location ->
-                    saveLocationToDatabase(location)
-                    lastLocation = location
+                    processLocation(location)
                 }
             }
         }
@@ -48,11 +50,15 @@ class LocationService : Service() {
         when (intent?.action) {
             "ACTION_START" -> {
                 currentSessionId = intent.getLongExtra("EXTRA_SESSION_ID", System.currentTimeMillis())
-                lastLocation = null // Reset last location for new session
                 startForegroundService()
                 startLocationUpdates()
             }
             "ACTION_STOP" -> {
+                val finalPoint = gpsProcessor.createZeroPoint(System.currentTimeMillis())
+                if (finalPoint != null) {
+                    insertPointToDb(finalPoint)
+                }
+                watchdogJob?.cancel()
                 stopLocationUpdates()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -69,14 +75,14 @@ class LocationService : Service() {
                 "GPS Záznam trasy",
                 NotificationManager.IMPORTANCE_LOW
             )
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
 
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Měření trasy aktivní")
             .setContentText("Probíhá záznam GPS na pozadí")
-            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setSmallIcon(R.drawable.ic_menu_mylocation)
             .setOngoing(true)
             .build()
 
@@ -84,9 +90,12 @@ class LocationService : Service() {
     }
 
     private fun startLocationUpdates() {
-        // Nastavení požadavku na maximální přesnost každou 1 vteřinu
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000)
-            .setMinUpdateIntervalMillis(1000)
+        // Požádáme o lokaci ideálně každých 500 ms (minimum 250 ms)
+        // Běžné telefony umí jen 1 Hz (1000 ms), ale moderní telefony (nebo dual-frequency GPS)
+        // umí 2 Hz a více, což zajistí bleskovou aktualizaci
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 500)
+            .setMinUpdateIntervalMillis(250)
+            .setMinUpdateDistanceMeters(0f)
             .build()
 
         try {
@@ -96,24 +105,49 @@ class LocationService : Service() {
                 Looper.getMainLooper()
             )
         } catch (e: SecurityException) {
-            // Zde by mělo být ošetření, pokud uživatel nedal oprávnění k poloze
+            // Ošetření oprávnění
         }
     }
 
-    private fun saveLocationToDatabase(location: Location) {
-        // Výpočet vzdálenosti od předchozího bodu v metrech
-        val distance = if (lastLocation != null) location.distanceTo(lastLocation!!) else 0f
+    private fun processLocation(location: Location) {
+        resetWatchdog()
 
-        // Přepočet rychlosti z m/s na km/h (pokud senzor rychlost nevrátí, uložíme 0)
-        val speedKmh = if (location.hasSpeed()) location.speed * 3.6f else 0f
+        val processedPoint = gpsProcessor.process(
+            lat = location.latitude,
+            lon = location.longitude,
+            timeMs = location.time,
+            accuracy = if (location.hasAccuracy()) location.accuracy else 999f,
+            hasHwSpeed = location.hasSpeed(),
+            hwSpeedMps = if (location.hasSpeed()) location.speed else 0f
+        )
 
+        if (processedPoint != null) {
+            insertPointToDb(processedPoint)
+        }
+    }
+
+    private fun resetWatchdog() {
+        watchdogJob?.cancel()
+        watchdogJob = serviceScope.launch {
+            // Pokud po dobu 3 sekund nepřijde od GPS žádná zpráva (stání v tunelu / vypnutí emulátoru)
+            delay(3000L)
+            if (gpsProcessor.isMoving || gpsProcessor.lastSpeedKmh > 0f) {
+                val pt = gpsProcessor.createZeroPoint(System.currentTimeMillis())
+                if (pt != null) {
+                    insertPointToDb(pt)
+                }
+            }
+        }
+    }
+
+    private fun insertPointToDb(pt: ProcessedPoint) {
         val point = LocationPoint(
             sessionId = currentSessionId,
-            timestamp = System.currentTimeMillis(),
-            latitude = location.latitude,
-            longitude = location.longitude,
-            speedKmh = speedKmh,
-            distanceSinceLast = distance
+            timestamp = pt.timeMs,
+            latitude = pt.lat,
+            longitude = pt.lon,
+            speedKmh = pt.speedKmh,
+            distanceSinceLast = pt.distanceM
         )
 
         serviceScope.launch {

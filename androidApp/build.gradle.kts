@@ -64,6 +64,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Pro jednoduché sdílení na GitHubu podepíšeme release verzi debug klíčem, 
+            // aby šla normálně nainstalovat bez složitého nastavování produkčních klíčů.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {

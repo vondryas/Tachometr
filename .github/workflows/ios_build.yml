@@ -8,10 +8,10 @@ on:
 
 jobs:
   build-ios:
-    name: Build iOS IPA
+    name: Build iOS & Run Tests
     runs-on: macos-latest
     permissions:
-      contents: write # Povolení, aby Action mohla upravovat Release
+      contents: write 
 
     steps:
       - name: Checkout Repository
@@ -27,13 +27,16 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Run Shared Multiplatform Tests (iOS & Android Logic)
+        # Toto spustí naše napsané testy (GpsProcessorTest) v iOS simulátor prostředí i na JVM
+        run: ./gradlew :shared:iosSimulatorArm64Test
+
       - name: Select Xcode
         run: sudo xcode-select -switch /Applications/Xcode.app
 
-      - name: Build iOS App (Unsigned)
+      - name: Build iOS App (Device IPA - Unsigned)
         run: |
           cd iosApp
-          # Kompilace Xcode projektu bez nutnosti placeného vývojářského certifikátu
           xcodebuild clean archive \
             -project iosApp.xcodeproj \
             -scheme iosApp \
@@ -44,14 +47,27 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Package into IPA for Sideloading
+      - name: Package Device IPA
         run: |
           cd iosApp
           mkdir -p Payload
-          # Přesuneme zkompilovanou .app složku do složky Payload (standardní formát pro IPA)
-          mv build/iosApp.xcarchive/Products/Applications/iosApp.app Payload/
-          # Zabalíme to jako ZIP, ale s příponou .ipa
+          cp -r build/iosApp.xcarchive/Products/Applications/iosApp.app Payload/
           zip -r ../Tachometr-iOS-Unsigned.ipa Payload
+          rm -rf Payload
+
+      - name: Build iOS App (Simulator .app for web testing)
+        run: |
+          cd iosApp
+          xcodebuild build \
+            -project iosApp.xcodeproj \
+            -scheme iosApp \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            -derivedDataPath build/simulator \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+          
+          cd build/simulator/Build/Products/Debug-iphonesimulator
+          zip -r ../../../../../../Tachometr-iOS-Simulator.zip iosApp.app
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
@@ -59,8 +75,16 @@ jobs:
           name: Tachometr-iOS-Unsigned
           path: Tachometr-iOS-Unsigned.ipa
 
-      - name: Upload to Release
+      - name: Upload Simulator Zip Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tachometr-iOS-Simulator
+          path: Tachometr-iOS-Simulator.zip
+
+      - name: Publish to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: Tachometr-iOS-Unsigned.ipa
+          files: |
+            Tachometr-iOS-Unsigned.ipa
+            Tachometr-iOS-Simulator.zip

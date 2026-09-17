@@ -1,5 +1,6 @@
 package com.example.tachometr
 
+import android.location.Location
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -115,6 +116,7 @@ fun PathDetailScreen(
     }
 
     Scaffold(
+        modifier = Modifier.systemBarsPadding(),
         topBar = {
             TopAppBar(
                 title = {
@@ -162,38 +164,104 @@ fun PathDetailScreen(
                         position = CameraPosition.fromLatLngZoom(firstPt, 15f)
                     }
 
-                    GoogleMap(
-                        modifier = Modifier.fillMaxSize(),
-                        cameraPositionState = cameraPositionState
-                    ) {
+                    val mapSegments = remember(points, tripMaxSpeed, timeRange) {
+                        if (points.isEmpty()) return@remember emptyList<ColoredSegment>()
+                        
+                        val segments = mutableListOf<ColoredSegment>()
                         val firstTime = points.first().timestamp
+                        
+                        var currentColor: Color? = null
+                        var currentIsSelected: Boolean? = null
+                        var currentSegment = mutableListOf<LatLng>()
+                        
                         for (i in 0 until points.size - 1) {
                             val p1 = points[i]
                             val p2 = points[i + 1]
-                            val latLngs = listOf(
-                                LatLng(p1.latitude, p1.longitude),
-                                LatLng(p2.latitude, p2.longitude)
-                            )
-
                             val relTime = (p1.timestamp - firstTime).toFloat() / 1000f
                             val isSelected = timeRange?.contains(relTime) ?: true
+                            val color = if (isSelected) FormatUtils.getSpeedColor(p2.speedKmh, tripMaxSpeed) else Color.Gray.copy(alpha = 0.4f)
+                            
+                            if (color != currentColor || isSelected != currentIsSelected) {
+                                if (currentSegment.isNotEmpty()) {
+                                    segments.add(ColoredSegment(currentColor!!, currentSegment, currentIsSelected!!, if (currentIsSelected!!) 10f else 5f))
+                                }
+                                currentSegment = mutableListOf(LatLng(p1.latitude, p1.longitude), LatLng(p2.latitude, p2.longitude))
+                                currentColor = color
+                                currentIsSelected = isSelected
+                            } else {
+                                currentSegment.add(LatLng(p2.latitude, p2.longitude))
+                            }
+                        }
+                        if (currentSegment.isNotEmpty() && currentColor != null) {
+                            segments.add(ColoredSegment(currentColor!!, currentSegment, currentIsSelected!!, if (currentIsSelected!!) 10f else 5f))
+                        }
+                        segments
+                    }
 
-                            val speedColor = FormatUtils.getSpeedColor(p2.speedKmh, tripMaxSpeed)
+                    var clickedPoint by remember { mutableStateOf<LocationPoint?>(null) }
 
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = cameraPositionState,
+                        onMapClick = { latLng ->
+                            if (points.isNotEmpty()) {
+                                val closest = points.minByOrNull {
+                                    val dLat = it.latitude - latLng.latitude
+                                    val dLon = it.longitude - latLng.longitude
+                                    dLat * dLat + dLon * dLon
+                                }
+                                if (closest != null) {
+                                    val results = FloatArray(1)
+                                    Location.distanceBetween(
+                                        closest.latitude, closest.longitude,
+                                        latLng.latitude, latLng.longitude,
+                                        results
+                                    )
+                                    // Pokud uživatel klikne v okruhu 60 metrů od bodu trasy
+                                    if (results[0] < 60f) {
+                                        clickedPoint = closest
+                                    } else {
+                                        clickedPoint = null // Kliknutí mimo trasu
+                                    }
+                                }
+                            }
+                        }
+                    ) {
+                        mapSegments.forEach { segment ->
                             Polyline(
-                                points = latLngs,
-                                color = if (isSelected) speedColor else Color.Gray.copy(alpha = 0.4f),
-                                width = if (isSelected) 10f else 5f
+                                points = segment.points,
+                                color = segment.color,
+                                width = segment.width
                             )
                         }
 
                         // Bod s maximální rychlostí (reaguje na výsek a okamžitě se posune)
                         if (activeMaxPoint != null) {
-                            key(activeMaxPoint) {
+                            key("max_${activeMaxPoint.timestamp}") {
+                                val markerState = rememberMarkerState(position = LatLng(activeMaxPoint.latitude, activeMaxPoint.longitude))
+                                LaunchedEffect(Unit) {
+                                    markerState.showInfoWindow()
+                                }
                                 Marker(
-                                    state = rememberMarkerState(position = LatLng(activeMaxPoint.latitude, activeMaxPoint.longitude)),
+                                    state = markerState,
                                     title = "MAX: ${activeMaxPoint.speedKmh.toInt()} km/h",
-                                    snippet = "Bod maximální rychlosti"
+                                    snippet = "Nejvyšší rychlost"
+                                )
+                            }
+                        }
+                        
+                        // Zobrazení rychlosti po kliknutí na trasu
+                        if (clickedPoint != null) {
+                            key("clicked_${clickedPoint!!.timestamp}") {
+                                val pt = clickedPoint!!
+                                val markerState = rememberMarkerState(position = LatLng(pt.latitude, pt.longitude))
+                                LaunchedEffect(Unit) {
+                                    markerState.showInfoWindow()
+                                }
+                                Marker(
+                                    state = markerState,
+                                    title = "Rychlost: ${pt.speedKmh.toInt()} km/h",
+                                    snippet = "Vzdálenost: ${FormatUtils.formatDistance(pt.distanceSinceLast)}"
                                 )
                             }
                         }
@@ -241,8 +309,10 @@ fun PathDetailScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text("0", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("${(tripMaxSpeed / 2).toInt()}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("${tripMaxSpeed.toInt()} km/h", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${(tripMaxSpeed * 0.25).toInt()}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${(tripMaxSpeed * 0.5).toInt()}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${(tripMaxSpeed * 0.75).toInt()}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${tripMaxSpeed.toInt()}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -472,3 +542,10 @@ fun PathDetailScreen(
         }
     }
 }
+
+data class ColoredSegment(
+    val color: Color,
+    val points: List<LatLng>,
+    val isSelected: Boolean,
+    val width: Float
+)

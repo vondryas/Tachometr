@@ -60,6 +60,7 @@ fun HistoryScreen(
     }
 
     Scaffold(
+        modifier = Modifier.systemBarsPadding(),
         topBar = {
             TopAppBar(
                 title = { Text("Historie tras") },

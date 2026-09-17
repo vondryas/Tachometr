@@ -49,8 +49,10 @@ android {
         applicationId = "com.example.tachometr"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        
+        // Načítá verzi předanou z příkazové řádky (přes GitHub Actions) nebo použije výchozí
+        versionCode = (project.findProperty("APP_VERSION_CODE") as? String)?.toInt() ?: 1
+        versionName = (project.findProperty("APP_VERSION_NAME") as? String) ?: "1.0"
     }
     packaging {
         resources {

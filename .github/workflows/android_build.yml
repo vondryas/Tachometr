@@ -39,6 +39,12 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Setup local.properties
+        env:
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+        run: |
+          echo "MAPS_API_KEY=$MAPS_API_KEY" > local.properties
+
       - name: Build Release APK
         # Předáváme verzi do gradle přes parametry -P
         run: ./gradlew :androidApp:assembleRelease -PAPP_VERSION_NAME="${{ env.APP_VERSION_NAME }}" -PAPP_VERSION_CODE="${{ env.APP_VERSION_CODE }}"

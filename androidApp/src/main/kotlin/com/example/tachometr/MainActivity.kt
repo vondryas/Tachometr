@@ -64,12 +64,14 @@ class MainActivity : ComponentActivity() {
                         permissionLauncher.launch(permissionsToRequest.toTypedArray())
                     }
 
+                    // Nastavíme context pro KMP utils
+                    applicationContextForPlatformUtils = applicationContext
+
                     // 4. Hlavní navigace aplikace
                     AppNavigation(
                         locationDao = locationDao,
                         sessionDao = sessionDao,
-                        locationTracker = locationTracker,
-                        context = applicationContext
+                        locationTracker = locationTracker
                     )
                 }
             }

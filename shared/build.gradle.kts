@@ -51,6 +51,8 @@ kotlin {
             implementation(libs.compose.uiTooling)
             implementation(libs.androidx.room3.sqlite.wrapper)
             implementation(libs.play.services.location)
+            implementation(libs.maps.compose)
+            implementation(libs.play.services.maps)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -63,6 +65,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.androidx.room3.runtime)
             implementation(libs.androidx.sqlite.bundled)
+            implementation(libs.androidx.navigation.compose)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

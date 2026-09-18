@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
+import kotlin.system.getTimeMillis
 
 class TachometerViewModel(
     private val locationDao: LocationDao,
@@ -64,7 +64,7 @@ class TachometerViewModel(
 
                 val stoppedSessionId = currentSessionId
                 // Uložení konečných dat do existující relace
-                val endTime = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                val endTime = getTimeMillis()
                 val finalDistance = _distance.value
                 val finalMaxSpeed = _maxSpeed.value
 
@@ -83,7 +83,7 @@ class TachometerViewModel(
                 onStopped?.invoke(stoppedSessionId)
             } else {
                 // START MĚŘENÍ
-                currentSessionId = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                currentSessionId = getTimeMillis()
 
                 // Vygenerování automatického názvu "Cesta X"
                 val sessions = sessionDao.getAllSessions().first()
@@ -115,9 +115,9 @@ class TachometerViewModel(
     private fun startTimer() {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
-            val startTime = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+            val startTime = getTimeMillis()
             while (true) {
-                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                val now = getTimeMillis()
                 val elapsed = now - startTime
                 _elapsedTime.value = elapsed
                 updateAverageSpeed(_distance.value, elapsed)

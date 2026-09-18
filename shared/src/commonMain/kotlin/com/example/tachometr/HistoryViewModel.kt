@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlin.system.getTimeMillis
+import kotlinx.datetime.Clock
 
 class HistoryViewModel(
     private val sessionDao: SessionDao,
@@ -23,7 +23,7 @@ class HistoryViewModel(
                 val pointsCount = locationDao.getPointCountForSession(session.id)
                 val sizeBytes = pointsCount * BYTES_PER_POINT
                 
-                val durationMs = (session.endTime ?: getTimeMillis()) - session.startTime
+                val durationMs = (session.endTime ?: Clock.System.now().toEpochMilliseconds()) - session.startTime
                 val formattedDate = formatDateTime(session.startTime)
 
                 SessionWithUiData(

@@ -57,7 +57,7 @@ fun AppNavigation(
             route = "detail/{sessionId}",
             arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
         ) { backStackEntry ->
-            val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
+            val sessionId = backStackEntry.savedStateHandle.get<Long>("sessionId") ?: 0L
             val factory = object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: KClass<T>, extras: CreationExtras): T {

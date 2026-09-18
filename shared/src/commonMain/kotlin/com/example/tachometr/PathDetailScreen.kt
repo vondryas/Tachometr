@@ -474,9 +474,3 @@ fun PathDetailScreen(
     }
 }
 
-data class ColoredSegment(
-    val color: Color,
-    val points: List<LatLng>,
-    val isSelected: Boolean,
-    val width: Float
-)

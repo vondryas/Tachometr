@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
+    kotlin("native.cocoapods")
     alias(libs.plugins.androidMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
@@ -21,6 +22,20 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "Shared"
             isStatic = true
+        }
+    }
+    
+    cocoapods {
+        summary = "Shared module"
+        homepage = "Link to the Shared Module homepage"
+        version = "1.0"
+        ios.deploymentTarget = "14.0"
+        framework {
+            baseName = "Shared"
+            isStatic = true
+        }
+        pod("GoogleMaps") {
+            version = "8.4.0"
         }
     }
     
@@ -58,6 +73,7 @@ kotlin {
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
+            implementation(compose.materialIconsExtended)
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
             implementation(libs.compose.uiToolingPreview)

@@ -27,6 +27,10 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Inject Secrets.xcconfig
+        run: |
+          echo "MAPS_API_KEY = ${{ secrets.MAPS_API_KEY }}" > iosApp/Configuration/Secrets.xcconfig
+
       - name: Run Shared Multiplatform Tests (iOS & Android Logic)
         # Toto spustí naše napsané testy (GpsProcessorTest) v iOS simulátor prostředí i na JVM
         run: ./gradlew :shared:iosSimulatorArm64Test
@@ -34,11 +38,17 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -switch /Applications/Xcode.app
 
+      - name: Install CocoaPods dependencies
+        run: |
+          ./gradlew :shared:podInstall
+          cd iosApp
+          pod install
+
       - name: Build iOS App (Device IPA - Unsigned)
         run: |
           cd iosApp
           xcodebuild clean archive \
-            -project iosApp.xcodeproj \
+            -workspace iosApp.xcworkspace \
             -scheme iosApp \
             -configuration Release \
             -destination 'generic/platform=iOS' \
@@ -59,7 +69,7 @@ jobs:
         run: |
           cd iosApp
           xcodebuild build \
-            -project iosApp.xcodeproj \
+            -workspace iosApp.xcworkspace \
             -scheme iosApp \
             -configuration Debug \
             -destination 'platform=iOS Simulator,name=iPhone 15' \

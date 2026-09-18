@@ -1,6 +1,6 @@
 package com.example.tachometr
 
-import android.location.Location
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -22,9 +22,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -112,8 +112,9 @@ fun PathDetailScreen(
     val formattedStartDate = remember(session) {
         val start = session?.startTime ?: 0L
         if (start > 0L) {
-            val sdf = SimpleDateFormat("d. M. yyyy HH:mm", Locale.getDefault())
-            sdf.format(Date(start))
+            val instant = Instant.fromEpochMilliseconds(start)
+            val dt = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+            "${dt.dayOfMonth}. ${dt.monthNumber}. ${dt.year} ${dt.hour.toString().padStart(2, '0')}:${dt.minute.toString().padStart(2, '0')}"
         } else ""
     }
 

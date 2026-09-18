@@ -23,7 +23,7 @@ class HistoryViewModel(
                 val pointsCount = locationDao.getPointCountForSession(session.id)
                 val sizeBytes = pointsCount * BYTES_PER_POINT
                 
-                val durationMs = (session.endTime ?: System.currentTimeMillis()) - session.startTime
+                val durationMs = (session.endTime ?: kotlinx.datetime.Clock.System.now().toEpochMilliseconds()) - session.startTime
                 val formattedDate = formatDateTime(session.startTime)
 
                 SessionWithUiData(

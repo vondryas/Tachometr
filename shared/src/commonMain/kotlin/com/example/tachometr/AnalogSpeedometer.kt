@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.PI
 
 @Composable
 fun AnalogSpeedometer(
@@ -96,7 +97,7 @@ fun AnalogSpeedometer(
             for (i in 0..tickCount) {
                 val fraction = i.toFloat() / tickCount
                 val angleDegree = startAngle + (fraction * sweepAngle)
-                val angleRad = Math.toRadians(angleDegree.toDouble())
+                val angleRad = (angleDegree * (PI / 180)).toDouble()
                 
                 val isMajorTick = i % 2 == 0
                 val tickLength = if (isMajorTick) 16.dp.toPx() else 8.dp.toPx()
@@ -137,7 +138,7 @@ fun AnalogSpeedometer(
             }
 
             // Draw Needle (využívá animovanou rychlost)
-            val needleAngleRad = Math.toRadians((startAngle + activeSweepAngle).toDouble())
+            val needleAngleRad = ((startAngle + activeSweepAngle) * (PI / 180)).toDouble()
             val needleEndX = center.x + (radius - 32.dp.toPx()) * cos(needleAngleRad).toFloat()
             val needleEndY = center.y + (radius - 32.dp.toPx()) * sin(needleAngleRad).toFloat()
 

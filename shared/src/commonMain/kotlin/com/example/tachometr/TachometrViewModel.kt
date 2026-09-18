@@ -63,7 +63,7 @@ class TachometerViewModel(
 
                 val stoppedSessionId = currentSessionId
                 // Uložení konečných dat do existující relace
-                val endTime = System.currentTimeMillis()
+                val endTime = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
                 val finalDistance = _distance.value
                 val finalMaxSpeed = _maxSpeed.value
 
@@ -82,7 +82,7 @@ class TachometerViewModel(
                 onStopped?.invoke(stoppedSessionId)
             } else {
                 // START MĚŘENÍ
-                currentSessionId = System.currentTimeMillis()
+                currentSessionId = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
 
                 // Vygenerování automatického názvu "Cesta X"
                 val sessions = sessionDao.getAllSessions().first()
@@ -114,14 +114,14 @@ class TachometerViewModel(
     private fun startTimer() {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
-            val startTime = System.currentTimeMillis()
+            val startTime = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
             while (true) {
-                val now = System.currentTimeMillis()
+                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
                 val elapsed = now - startTime
                 _elapsedTime.value = elapsed
                 updateAverageSpeed(_distance.value, elapsed)
                 // Pokud už víc než 2.5s nepřišel nový bod, rychlost klesne na 0
-                if (lastPointTime > 0 && now - lastPointTime > 2500L) {
+                if (lastPointTime > 0L && (now - lastPointTime) > 2500L) {
                     _currentSpeed.value = 0f
                 }
                 delay(1000L)

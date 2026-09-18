@@ -163,10 +163,10 @@ class GpsProcessor {
      */
     private fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
         val r = 6371000.0 // Země v metrech
-        val phi1 = lat1 * Math.PI / 180.0
-        val phi2 = lat2 * Math.PI / 180.0
-        val deltaPhi = (lat2 - lat1) * Math.PI / 180.0
-        val deltaLambda = (lon2 - lon1) * Math.PI / 180.0
+        val phi1 = lat1 * PI / 180.0
+        val phi2 = lat2 * PI / 180.0
+        val deltaPhi = (lat2 - lat1) * PI / 180.0
+        val deltaLambda = (lon2 - lon1) * PI / 180.0
 
         val a = sin(deltaPhi / 2) * sin(deltaPhi / 2) +
                 cos(phi1) * cos(phi2) *

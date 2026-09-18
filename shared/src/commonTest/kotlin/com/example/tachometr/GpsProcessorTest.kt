@@ -67,7 +67,7 @@ class GpsProcessorTest {
         assertNotNull(pt)
         assertTrue(processor.isMoving)
         assertTrue(pt!!.distanceM > 30f)
-        assertTrue("Speed should be high, was ${pt.speedKmh}", pt.speedKmh > 100f)
+        assertTrue(pt.speedKmh > 100f, "Speed should be high, was ${pt.speedKmh}")
     }
 
     @Test
@@ -88,7 +88,7 @@ class GpsProcessorTest {
         
         assertNotNull(pt)
         // Očekáváme prudký pokles rychlosti
-        assertTrue("Speed should drop rapidly, was ${pt!!.speedKmh}", pt.speedKmh < 50f)
+        assertTrue(pt!!.speedKmh < 50f, "Speed should drop rapidly, was ${pt.speedKmh}")
     }
 
     @Test

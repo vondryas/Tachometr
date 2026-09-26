@@ -29,6 +29,7 @@ kotlin {
     }
     
     cocoapods {
+        name = "Shared"
         summary = "Shared module"
         homepage = "Link to the Shared Module homepage"
         version = "1.0"

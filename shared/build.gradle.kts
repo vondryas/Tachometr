@@ -45,8 +45,6 @@ kotlin {
             export(libs.androidx.lifecycle.viewmodelCompose)
             export(libs.androidx.lifecycle.runtimeCompose)
             export(libs.androidx.room3.runtime)
-            export("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
-            export("org.jetbrains.compose.components:components-resources:1.11.1")
         }
         pod("GoogleMaps") {
             version = "8.4.0"
@@ -90,14 +88,14 @@ kotlin {
             api(libs.compose.material3)
             implementation(compose.materialIconsExtended)
             api(libs.compose.ui)
-            api(libs.compose.components.resources)
+            implementation(libs.compose.components.resources)
             implementation(libs.compose.uiToolingPreview)
             api(libs.androidx.lifecycle.viewmodelCompose)
             api(libs.androidx.lifecycle.runtimeCompose)
             api(libs.androidx.room3.runtime)
             implementation(libs.androidx.sqlite.bundled)
             api(libs.androidx.navigation.compose)
-            api("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

@@ -23,6 +23,9 @@ kotlin {
             baseName = "Shared"
             isStatic = true
         }
+        iosTarget.binaries.getTest("DEBUG").apply {
+            linkerOpts("-framework", "GoogleMapsBase", "-framework", "GoogleMapsCore")
+        }
     }
     
     cocoapods {

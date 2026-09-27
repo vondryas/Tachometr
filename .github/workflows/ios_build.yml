@@ -61,7 +61,7 @@ jobs:
         run: |
           cd iosApp
           mkdir -p Payload
-          cp -r build/iosApp.xcarchive/Products/Applications/iosApp.app Payload/
+          cp -r build/iosApp.xcarchive/Products/Applications/Tachometr.app Payload/
           zip -r ../Tachometr-iOS-Unsigned.ipa Payload
           rm -rf Payload
 
@@ -77,7 +77,7 @@ jobs:
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
           
           cd build/simulator/Build/Products/Debug-iphonesimulator
-          zip -r ../../../../../../Tachometr-iOS-Simulator.zip iosApp.app
+          zip -r ../../../../../../Tachometr-iOS-Simulator.zip Tachometr.app
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
